@@ -1,0 +1,179 @@
+8 PUZZLE PROBLEM-DFS
+# DFS for 8 Puzzle
+
+goal = (1, 2, 3, 4, 5, 6, 7, 8, 0)
+
+def print_puzzle(state):
+    for i in range(0, 9, 3):
+        print(state[i:i+3])
+    print()
+
+def dfs(state, path, visited):
+
+    # Goal reached
+    if state == goal:
+        return path
+
+    visited.add(state)
+
+    zero = state.index(0)
+    row = zero // 3
+    col = zero % 3
+
+    # Left, Down, Right, Up
+    moves = [
+        (0, -1),
+        (1, 0),
+        (0, 1),
+        (-1, 0)
+    ]
+
+    for dr, dc in moves:
+
+        new_row = row + dr
+        new_col = col + dc
+
+        if 0 <= new_row < 3 and 0 <= new_col < 3:
+
+            new_pos = new_row * 3 + new_col
+
+            new_state = list(state)
+
+            # Swap 0 with tile
+            new_state[zero], new_state[new_pos] = \
+                new_state[new_pos], new_state[zero]
+
+            new_state = tuple(new_state)
+
+            if new_state not in visited:
+
+                result = dfs(
+                    new_state,
+                    path + [new_state],
+                    visited
+                )
+
+                if result is not None:
+                    return result
+
+    return None
+
+# Main
+print("Enter initial state:")
+
+initial = []
+
+for i in range(9):
+    initial.append(int(input()))
+
+initial = tuple(initial)
+
+solution = dfs(initial, [initial], set())
+
+if solution:
+
+    print("\nSolution Found!")
+    print("Number of moves:", len(solution) - 1)
+
+    for i, state in enumerate(solution):
+        print("Step", i)
+        print_puzzle(state)
+
+else:
+    print("No solution found.")
+
+
+
+
+8 PUZZLE PROBLEM-IDS
+# Iterative Deepening Search for 8 Puzzle
+
+goal = (1, 2, 3, 4, 5, 6, 7, 8, 0)
+def print_puzzle(state):
+    for i in range(0, 9, 3):
+        print(state[i:i+3])
+    print()
+# Depth Limited Search
+def dls(state, depth, path):
+
+    if state == goal:
+        return path
+
+    if depth == 0:
+        return None
+
+    zero = state.index(0)
+
+    row = zero // 3
+    col = zero % 3
+
+    # Left, Down, Right, Up
+    moves = [
+        (0, -1),
+        (1, 0),
+        (0, 1),
+        (-1, 0)
+    ]
+    for dr, dc in moves:
+
+        new_row = row + dr
+        new_col = col + dc
+
+        if 0 <= new_row < 3 and 0 <= new_col < 3:
+
+            new_pos = new_row * 3 + new_col
+
+            new_state = list(state)
+
+            # Swap blank with tile
+            new_state[zero], new_state[new_pos] = \
+                new_state[new_pos], new_state[zero]
+
+            new_state = tuple(new_state)
+
+            # Avoid repeating states in current path
+            if new_state not in path:
+
+                result = dls(
+                    new_state,
+                    depth - 1,
+                    path + [new_state]
+                )
+
+                if result is not None:
+                    return result
+    return None
+# IDS
+def ids(initial):
+
+    depth = 0
+
+    while True:
+
+        print("Searching at depth:", depth)
+        result = dls(initial, depth, [initial])
+        if result is not None:
+            return result
+
+        depth += 1
+
+# Main
+print("Enter initial state:")
+
+initial = []
+
+for i in range(9):
+    initial.append(int(input()))
+
+initial = tuple(initial)
+
+solution = ids(initial)
+
+
+print("\nSolution Found!")
+print("Number of moves:", len(solution) - 1)
+
+for i, state in enumerate(solution):
+
+    print("Step", i)
+    print_puzzle(state)
