@@ -1,0 +1,272 @@
+
+TIC TAC TOE
+import math
+
+class TicTacToe:
+
+    def __init__(self):
+        self.board = [" " for _ in range(9)]
+
+    # Print the board
+    def print_board(self):
+        print(self.board[0], "|", self.board[1], "|", self.board[2])
+        print("--+---+--")
+        print(self.board[3], "|", self.board[4], "|", self.board[5])
+        print("--+---+--")
+        print(self.board[6], "|", self.board[7], "|", self.board[8])
+
+    # Check whether a player has won
+    def win(self, p):
+        winning_combinations = [
+            (0, 1, 2),
+            (3, 4, 5),
+            (6, 7, 8),
+            (0, 3, 6),
+            (1, 4, 7),
+            (2, 5, 8),
+            (0, 4, 8),
+            (2, 4, 6)
+        ]
+
+        for a, b, c in winning_combinations:
+            if self.board[a] == p and self.board[b] == p and self.board[c] == p:
+                return True
+
+        return False
+
+    # Minimax algorithm
+    def minimax(self, ai):
+
+        # AI wins
+        if self.win("X"):
+            return 1
+
+        # Human wins
+        if self.win("O"):
+            return -1
+
+        # Draw
+        if " " not in self.board:
+            return 0
+
+        if ai == "X":
+            # MAX player
+            best = -math.inf
+
+            for i in range(9):
+                if self.board[i] == " ":
+                    self.board[i] = "X"
+
+                    score = self.minimax("O")
+
+                    self.board[i] = " "
+
+                    best = max(best, score)
+
+            return best
+
+        else:
+            # MIN player
+            best = math.inf
+
+            for i in range(9):
+                if self.board[i] == " ":
+                    self.board[i] = "O"
+
+                    score = self.minimax("X")
+
+                    self.board[i] = " "
+
+                    best = min(best, score)
+
+            return best
+
+    # Find the best move for AI
+    def ai_move(self):
+
+        best = -math.inf
+        move = 0
+
+        for i in range(9):
+
+            if self.board[i] == " ":
+
+                self.board[i] = "X"
+
+                score = self.minimax("O")
+
+                self.board[i] = " "
+
+                if score > best:
+                    best = score
+                    move = i
+
+        self.board[move] = "X"
+
+    # Main game
+    def play(self):
+
+        while True:
+
+            self.print_board()
+
+            # Human move
+            pos = int(input("Enter position (1-9): ")) - 1
+
+            if pos < 0 or pos > 8 or self.board[pos] != " ":
+                print("Invalid position!")
+                continue
+
+            self.board[pos] = "O"
+
+            # Check human win
+            if self.win("O"):
+                self.print_board()
+                print("You win!")
+                break
+
+            # Check draw
+            if " " not in self.board:
+                self.print_board()
+                print("Draw!")
+                break
+
+            # AI move
+            self.ai_move()
+
+            # Check AI win
+            if self.win("X"):
+                self.print_board()
+                print("AI wins!")
+                break
+
+            # Check draw
+            if " " not in self.board:
+                self.print_board()
+                print("Draw!")
+                break
+
+# Create game
+game = TicTacToe()
+
+# Start game
+game.play()
+
+VACUUM CLEANER
+
+class VacuumCleanerAgent:
+
+    def __init__(self, initial_location, room_a_status, room_b_status):
+        self.location = initial_location
+
+        self.environment = {
+            "A": room_a_status,
+            "B": room_b_status
+        }
+
+        self.cost = 0
+
+    # Display current state
+    def display_state(self):
+        print("\nCurrent Status:")
+        print("Agent Location:", self.location)
+        print("Room A:", self.environment["A"])
+        print("Room B:", self.environment["B"])
+        print("Cost:", self.cost)
+
+    # Vacuum cleaner agent
+    def run(self):
+
+        print("\nStarting Vacuum Cleaner Agent...")
+        self.display_state()
+
+        while self.environment[self.location] == 1:
+
+            print("Action: Suck dirt in Room", self.location)
+
+            # Clean the current room
+            self.environment[self.location] = 0
+
+            # Increase cost
+            self.cost += 1
+
+            self.display_state()
+
+        # Move to the other room
+        if self.environment["A"] == 1 or self.environment["B"] == 1:
+
+            if self.location == "A":
+                print("Action: Move Right to Room B")
+                self.location = "B"
+
+            else:
+                print("Action: Move Left to Room A")
+                self.location = "A"
+
+            self.cost += 1
+            self.display_state()
+
+            # Clean the new room
+            if self.environment[self.location] == 1:
+
+                print("Action: Suck dirt in Room", self.location)
+
+                self.environment[self.location] = 0
+                self.cost += 1
+
+                self.display_state()
+
+        print("\nGoal achieved: All rooms are clean!")
+        print("Total Performance Cost:", self.cost)
+
+
+def main():
+
+    print("VACUUM CLEANER AGENT")
+    print("ENVIRONMENT SETUP")
+
+    # Get initial location
+    while True:
+        location = input("Enter initial agent location (A or B): ").upper()
+
+        if location in ["A", "B"]:
+            break
+
+        print("Invalid location! Please enter A or B.")
+
+    # Get Room A status
+    while True:
+        try:
+            status_a = int(input("Enter Room A status (1 for DIRTY, 0 for CLEAN): "))
+
+            if status_a in [0, 1]:
+                break
+
+            print("Invalid value! Enter 0 or 1.")
+
+        except ValueError:
+            print("Invalid input! Please enter an integer (0 or 1).")
+
+    # Get Room B status
+    while True:
+        try:
+            status_b = int(input("Enter Room B status (1 for DIRTY, 0 for CLEAN): "))
+
+            if status_b in [0, 1]:
+                break
+
+            print("Invalid value! Enter 0 or 1.")
+
+        except ValueError:
+            print("Invalid input! Please enter an integer (0 or 1).")
+
+    # Create agent
+    agent = VacuumCleanerAgent(location, status_a, status_b)
+
+    # Run agent
+    agent.run()
+
+
+if __name__ == "__main__":
+    main()
+
