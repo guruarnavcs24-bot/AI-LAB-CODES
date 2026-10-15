@@ -1,0 +1,86 @@
+import random
+import math
+
+N = 8
+
+
+def calculate_cost(board):
+    """Count pairs of queens attacking each other."""
+    cost = 0
+
+    for i in range(N):
+        for j in range(i + 1, N):
+            if (board[i] == board[j] or
+                    abs(board[i] - board[j]) == abs(i - j)):
+                cost += 1
+
+    return cost
+
+
+def print_board(board):
+    for row in range(N):
+        for col in range(N):
+            if board[col] == row:
+                print("Q", end=" ")
+            else:
+                print(".", end=" ")
+        print()
+    print()
+
+
+def simulated_annealing():
+    # One queen in each column
+    current = [random.randint(0, N - 1) for _ in range(N)]
+    current_cost = calculate_cost(current)
+
+    temperature = 100.0
+    cooling_rate = 0.995
+    minimum_temperature = 0.0001
+    iteration = 0
+
+    while temperature > minimum_temperature:
+        if current_cost == 0:
+            break
+
+        # Create a neighboring state
+        neighbor = current[:]
+        col = random.randint(0, N - 1)
+        row = random.randint(0, N - 1)
+
+        while row == neighbor[col]:
+            row = random.randint(0, N - 1)
+
+        neighbor[col] = row
+        neighbor_cost = calculate_cost(neighbor)
+
+        # Change in cost
+        delta = neighbor_cost - current_cost
+
+        # Accept better moves or probabilistically accept
+        # worse moves based on the temperature.
+        if delta < 0:
+            current = neighbor
+            current_cost = neighbor_cost
+        else:
+            probability = math.exp(-delta / temperature)
+
+            if random.random() < probability:
+                current = neighbor
+                current_cost = neighbor_cost
+
+        temperature *= cooling_rate
+        iteration += 1
+
+    print("Iterations:", iteration)
+    print("Final state:", current)
+    print("Final cost:", current_cost)
+    print_board(current)
+
+    if current_cost == 0:
+        print("Solution found!")
+    else:
+        print("No solution found in this run.")
+
+
+if __name__ == "__main__":
+    simulated_annealing()
