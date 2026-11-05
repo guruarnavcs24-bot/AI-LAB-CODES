@@ -1,0 +1,185 @@
+import re
+
+def is_variable(expr):
+    """Check if an expression is a variable (starts with lowercase or single lowercase letter)."""
+    return isinstance(expr, str) and expr.isidentifier() and expr[0].islower()
+
+def parse_expression(expr):
+    """
+    Parses a FOL expression string into a structure:
+    - Atom/Constant/Variable: str
+    - Compound Predicate: (predicate_symbol, [arg1, arg2, ...])
+    """
+    expr = expr.strip()
+    match = re.match(r'^(\w+)\((.*)\)$', expr)
+    if not match:
+        return expr  # Variable, constant, or atomic symbol
+    
+    predicate = match.group(1)
+    args_str = match.group(2)
+    
+    # Split arguments respecting nested parentheses
+    args = []
+    bracket_count = 0
+    current_arg = []
+    
+    for char in args_str:
+        if char == ',' and bracket_count == 0:
+            args.append("".join(current_arg).strip())
+            current_arg = []
+        else:
+            if char == '(':
+                bracket_count += 1
+            elif char == ')':
+                bracket_count -= 1
+            current_arg.append(char)
+            
+    if current_arg:
+        args.append("".join(current_arg).strip())
+        
+    return (predicate, args)
+
+def occurs_check(var, expr):
+    """Returns True if variable occurs inside the expression."""
+    if var == expr:
+        return True
+    if isinstance(expr, tuple):
+        return any(occurs_check(var, arg) for arg in expr[1])
+    return False
+
+def apply_substitution(subst, expr):
+    """Applies a substitution set to an expression."""
+    if not subst:
+        return expr
+    
+    if isinstance(expr, str):
+        return subst.get(expr, expr)
+    
+    if isinstance(expr, tuple):
+        predicate, args = expr
+        new_args = [apply_substitution(subst, arg) for arg in args]
+        return (predicate, new_args)
+    
+    return expr
+
+def unify(psi1, psi2):
+    """
+    Implementation of Unify(Psi1, Psi2) based on the algorithm slides.
+    Returns dictionary of substitutions on success, or 'FAILURE'.
+    """
+    # Parse string inputs on initial call
+    if isinstance(psi1, str):
+        psi1 = parse_expression(psi1)
+    if isinstance(psi2, str):
+        psi2 = parse_expression(psi2)
+
+    # Step 1: If Psi1 or Psi2 is a variable or constant (atomic string expression)
+    if isinstance(psi1, str) or isinstance(psi2, str):
+        # a) If Psi1 or Psi2 are identical, then return NIL (empty substitution set)
+        if psi1 == psi2:
+            return {}
+        
+        # b) Else if Psi1 is a variable
+        if is_variable(psi1):
+            # a. then if Psi1 occurs in Psi2, then return FAILURE
+            if occurs_check(psi1, psi2):
+                return "FAILURE"
+            # b. Else return { Psi2 / Psi1 }
+            return {psi1: psi2}
+            
+        # c) Else if Psi2 is a variable
+        if is_variable(psi2):
+            # a. If Psi2 occurs in Psi1, then return FAILURE
+            if occurs_check(psi2, psi1):
+                return "FAILURE"
+            # b. Else return { Psi1 / Psi2 }
+            return {psi2: psi1}
+            
+        # d) Else return FAILURE (Two distinct constants)
+        return "FAILURE"
+
+    # Step 2: If the initial Predicate symbol in Psi1 and Psi2 are not same, then return FAILURE
+    pred1, args1 = psi1
+    pred2, args2 = psi2
+    if pred1 != pred2:
+        return "FAILURE"
+
+    # Step 3: If Psi1 and Psi2 have a different number of arguments, then return FAILURE
+    if len(args1) != len(args2):
+        return "FAILURE"
+
+    # Step 4: Set Substitution set (SUBST) to NIL
+    subst = {}
+
+    # Step 5: For i = 1 to the number of elements in Psi1
+    for arg1, arg2 in zip(args1, args2):
+        # Apply current substitutions to remaining arguments
+        arg1_sub = apply_substitution(subst, arg1)
+        arg2_sub = apply_substitution(subst, arg2)
+        
+        # a) Call Unify function with the ith element of Psi1 and Psi2
+        S = unify(arg1_sub, arg2_sub)
+        
+        # b) If S = failure then returns Failure
+        if S == "FAILURE":
+            return "FAILURE"
+            
+        # c) If S != NIL then update SUBST
+        if S:
+            # Update previous substitutions with the new substitution
+            for var in subst:
+                subst[var] = apply_substitution(S, subst[var])
+            # APPEND(S, SUBST)
+            subst.update(S)
+
+    # Step 6: Return SUBST
+    return subst
+
+def format_expr(expr):
+    """Formats parsed expression tuple back to readable string."""
+    if isinstance(expr, tuple):
+        pred, args = expr
+        formatted_args = [format_expr(a) for a in args]
+        return f"{pred}({', '.join(formatted_args)})"
+    return str(expr)
+
+# --- Test Examples from Slides ---
+if __name__ == "__main__":
+    test_cases = [
+        ("Eats(x, Apple)", "Eats(Riya, y)"),
+        ("Knows(John, x)", "Knows(x, Elisabeth)"),
+        ("P(x, h(y))", "P(a, f(z))"),
+        ("p(f(a), g(y))", "p(x, x)")
+    ]
+
+    for expr1, expr2 in test_cases:
+        result = unify(expr1, expr2)
+        print(f"Unifying: '{expr1}' and '{expr2}'")
+        if result == "FAILURE":
+            print("  Result: FAILURE\n")
+        else:
+            subst_str = ", ".join([f"{v} = {format_expr(val)}" for v, val in result.items()])
+            print(f"  Result: Success")
+            print(f"  Substitutions: {{ {subst_str} }}")
+            
+            # Show unified expression
+            parsed1 = parse_expression(expr1)
+            unified = apply_substitution(result, parsed1)
+            print(f"  Unified Expression: {format_expr(unified)}\n")
+
+
+
+OUTPUT:
+Unifying: 'Eats(x, Apple)' and 'Eats(Riya, y)'
+  Result: Success
+  Substitutions: { x = Riya, y = Apple }
+  Unified Expression: Eats(Riya, Apple)
+
+Unifying: 'Knows(John, x)' and 'Knows(x, Elisabeth)'
+  Result: FAILURE
+
+Unifying: 'P(x, h(y))' and 'P(a, f(z))'
+  Result: FAILURE
+
+Unifying: 'p(f(a), g(y))' and 'p(x, x)'
+  Result: FAILURE
