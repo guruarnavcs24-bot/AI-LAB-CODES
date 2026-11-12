@@ -1,0 +1,158 @@
+
+var_count = 0
+
+
+def STANDARDIZE_VARIABLES(rule):
+    global var_count
+    var_count += 1
+    mapping = {}
+
+    def rename(x):
+        if isinstance(x, str) and x.startswith("?"):
+            if x not in mapping:
+                mapping[x] = "?v" + str(var_count) + str(len(mapping))
+            return mapping[x]
+
+        if isinstance(x, tuple):
+            return tuple(rename(i) for i in x)
+
+        return x
+
+    return (rename(rule[0]), rename(rule[1]))
+
+
+def SUBST(theta, x):
+    if isinstance(x, str):
+        return theta.get(x, x)
+
+    if isinstance(x, tuple):
+        return tuple(SUBST(theta, i) for i in x)
+
+    return x
+
+
+def UNIFY(x, y, theta):
+    if theta is None:
+        return None
+
+    x = SUBST(theta, x)
+    y = SUBST(theta, y)
+
+    if x == y:
+        return theta
+
+    if isinstance(x, str) and x.startswith("?"):
+        theta[x] = y
+        return theta
+
+    if isinstance(y, str) and y.startswith("?"):
+        theta[y] = x
+        return theta
+
+    if isinstance(x, tuple) and isinstance(y, tuple):
+        if len(x) != len(y):
+            return None
+
+        for a, b in zip(x, y):
+            theta = UNIFY(a, b, theta)
+
+            if theta is None:
+                return None
+
+        return theta
+
+    return None
+
+
+def match_all(premises, facts, i=0, theta=None):
+    if theta is None:
+        theta = {}
+
+    if i == len(premises):
+        return [theta]
+
+    results = []
+
+    for fact in facts:
+        sub = UNIFY(
+            SUBST(theta, premises[i]),
+            fact,
+            theta.copy()
+        )
+
+        if sub is not None:
+            results.extend(
+                match_all(premises, facts, i + 1, sub)
+            )
+
+    return results
+
+
+def FOL_FC_ASK(KB, alpha):
+    while True:
+        new = []
+
+        for rule in KB["rules"]:
+            premises, conclusion = STANDARDIZE_VARIABLES(rule)
+
+            substitutions = match_all(premises, KB["facts"])
+
+            for theta in substitutions:
+                q = SUBST(theta, conclusion)
+
+                if not any(UNIFY(q, f, {}) is not None
+                           for f in KB["facts"] + new):
+
+                    new.append(q)
+
+                    phi = UNIFY(q, alpha, {})
+
+                    if phi is not None:
+                        return phi
+
+        if not new:
+            return False
+
+        KB["facts"].extend(new)
+
+
+facts = [
+    ("Owns", "A", "T1"),
+    ("Missile", "T1"),
+    ("American", "Robert"),
+    ("Enemy", "A", "America")
+]
+
+rules = [
+    (
+        [("Missile", "?x"), ("Owns", "A", "?x")],
+        ("Sells", "Robert", "?x", "A")
+    ),
+
+    (
+        [("Missile", "?x")],
+        ("Weapon", "?x")
+    ),
+
+    (
+        [("Enemy", "?x", "America")],
+        ("Hostile", "?x")
+    ),
+
+    (
+        [("American", "?p"), ("Weapon", "?q"),
+         ("Sells", "?p", "?q", "?r"), ("Hostile", "?r")],
+        ("Criminal", "?p")
+    )
+]
+
+KB = {"facts": facts, "rules": rules}
+
+query = ("Criminal", "Robert")
+
+result = FOL_FC_ASK(KB, query)
+
+if result is not False:
+    print("Query proved: Criminal(Robert)")
+else:
+    print("Query cannot be proved")
